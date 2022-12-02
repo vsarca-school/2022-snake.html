@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html style="width:  100%; height: 100%; margin: 0;">
+
+<script>
+    /* No longer need this, comment it out
+<head>
+    <link rel="stylesheet" href="snake.css">
+</head>
+*/
+</script>
+
+<title>
+    Snake
+</title>
+
+<body style="width:  100%; height: 100%; margin: 0;">
+    <canvas id="snake" style="padding-top: 2%; padding-left: 0; padding-right: 0; margin-left: auto; margin-right: auto; display: block;"></canvas>
+</body>
+
+<script>
+    // Variables
+    var running = true;
+    var width = 40, height = 20;
+    var direction = 0; // right, up, left, down, are 0-3
+    var changed_direction = false;
+    var cellsize = 10;
+    var frametime = 100;
+
+    var score = 0;
+    var frames = 0;
+    var snake = [[], [], []]; // snake starts at 0,0
+    var apple = []; // to randomize later
+    apple.push(Math.floor(Math.random()*width));
+    apple.push(Math.floor(Math.random()*height));
+    snake[0].push(Math.floor(Math.random()*(width-5)));
+    snake[0].push(Math.floor(Math.random()*height));
+    snake[1].push(snake[0][0]-1);
+    snake[1].push(snake[0][1]);
+    snake[2].push(snake[1][0]-1);
+    snake[2].push(snake[1][1]);
+
+    // Graphics
+    var canvas = document.getElementById("snake");
+    var ctx = canvas.getContext("2d");
+
+    function onKeypress(evt) {
+        if (changed_direction)
+        {
+            setTimeout(onKeypress, frametime/2, evt);
+            return; // Dont u-turn suicide
+        }
+
+        changed_direction = true;
+        switch (evt.key)
+        {
+        case 'w':
+            if (direction != 3) direction = 1;
+            break;
+        case 'a':
+            if (direction != 0) direction = 2;
+            break;
+        case 's':
+            if (direction != 1) direction = 3;
+            break;
+        case 'd':
+            if (direction != 2) direction = 0;
+            break;
+        }
+    };
+    window.onkeypress = onKeypress;
+    
+    window.onclick = function () {
+        if (running) return; // dont restart unless game over
+        
+        running = true;
+        
+        // Restart game
+        var score = 0;
+        var frames = 0;
+        direction = 0; // right, up, left, down, are 0-3
+        snake = [[], [], []]; // snake starts at 0,0
+        apple = []; // to randomize later
+        //apple.push(Math.floor(Math.random()*width));
+        //apple.push(Math.floor(Math.random()*height));
+        snake[0].push(Math.floor(Math.random()*(width-5)));
+        snake[0].push(Math.floor(Math.random()*height));
+        snake[1].push(snake[0][0]-1);
+        snake[1].push(snake[0][1]);
+        snake[2].push(snake[1][0]-1);
+        snake[2].push(snake[1][1]);
+        placeApple();
+    }
+
+    function placeApple()
+    {
+        var possibilities = [];
+        for (var x=0; x<width; x++)
+        {
+            for (var y=0; y<height; y++)
+            {
+                var success = true;
+                snake.forEach(function (pair) {
+                    if (pair[0]==x && pair[1]==y)
+                    {
+                        success = false;
+                    }
+                });
+                if (success)
+                {
+                    possibilities.push([x,y]);
+                }
+            }
+        }
+
+        apple = possibilities[Math.floor(Math.random()*possibilities.length)];
+    }
+
+    var every_second = setInterval(function() {
+        // Set the canvas size
+        cellsize = Math.floor(Math.min(window.innerWidth*0.02, window.innerHeight*0.04));
+        canvas.width = cellsize*width;
+        canvas.height = cellsize*height;
+        
+        if (!running)
+        {
+            // Empty screen
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = cellsize*3+"px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Game Over", width*cellsize/2, height*cellsize/2 - cellsize);
+
+            return; // dont run game when game over
+        }
+
+        // Time alive
+        frames++;
+        // Let person change direction once per frame
+        changed_direction = false;
+
+        // Progress snake
+        switch(direction)
+        {
+        case 0:
+            snake.splice(0, 0, [snake[0][0]+1,snake[0][1]]);
+            break;
+        case 1:
+            snake.splice(0, 0, [snake[0][0],snake[0][1]-1]);
+            break;
+        case 2:
+            snake.splice(0, 0, [snake[0][0]-1,snake[0][1]]);
+            break;
+        case 3:
+            snake.splice(0, 0, [snake[0][0],snake[0][1]+1]);
+            break;
+        }
+
+        if (snake[0][0]==apple[0] && snake[0][1]==apple[1])
+        {
+            //apple[0] = Math.floor(Math.random()*width);
+            //apple[1] = Math.floor(Math.random()*height);
+            placeApple();
+            score++;
+        }
+        else
+        {
+            snake.pop(-1);
+        }
+
+        // Collisions
+        if (snake[0][0] < 0 || snake[0][0] >= width || snake[0][1] < 0 || snake[0][1] >= height)
+        {
+            running = false; // wall collision
+        }
+        for (var i=1; i<snake.length; i++)
+        {
+            if (snake[0][0]==snake[i][0] && snake[0][1]==snake[i][1])
+            {
+                running = false; // self collision
+            }
+        }
+
+        // DRAWING COMMANDS
+        // Empty screen
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        // Draw snake
+        ctx.fillStyle = "#88FF00";
+        snake.forEach(function (pair) {
+            ctx.fillRect(cellsize*pair[0], cellsize*pair[1], cellsize, cellsize);
+        });
+
+        // Draw apple
+        ctx.fillStyle = "#FF0000";
+        ctx.fillRect(cellsize*apple[0], cellsize*apple[1], cellsize, cellsize);
+
+        // Draw score
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = cellsize+"px Arial";
+        ctx.fillText("Score: "+(score*10+Math.floor(frames/100)), cellsize*(width-5),cellsize)
+    }, frametime);
+</script>
+</html>
